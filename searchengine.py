@@ -199,10 +199,12 @@ class searcher:
                 tablelist += 'wordlocation w%d' % tablenumber
                 clauselist += 'w%d.wordid=%d' % (tablenumber, wordid)
                 tablenumber += 1
-
+            else:
+                print "cann't fetch word id"
+                return [],0
 
         fullquery = 'select %s from %s where %s' % (fieldlist, tablelist, clauselist)
-        
+        print fullquery
         cur = self.con.execute(fullquery)
         rows = [row for row in cur]
 
