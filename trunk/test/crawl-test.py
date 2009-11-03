@@ -18,6 +18,7 @@ pagelist3 = [
     'http://www.bbc.com'
 ]
 crawler=searchengine.crawler('news.db')
+# crawler = searchengine.crawler('searchindex.db')
 try:
     crawler.createindextables()
 except:
