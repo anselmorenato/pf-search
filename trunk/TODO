@@ -3,3 +3,7 @@
 
 * DONE Need replace Beautiful Soup to another better XML/HTML parser lib
 * TODO Need add fetch method to donn't fetch the already UPDATEed, needs to add A time in url db, and first get a HEAD to know time, Modified-since
+  
+* TODO multi word search need add.
+  
+  
