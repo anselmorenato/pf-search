@@ -17,7 +17,7 @@ pagelist3 = [
     'http://www.cnn.com',
     'http://www.bbc.com'
 ]
-crawler=searchengine.crawler('news.db')
+crawler=searchengine.crawler('data/news.db')
 # crawler = searchengine.crawler('searchindex.db')
 try:
     crawler.createindextables()
