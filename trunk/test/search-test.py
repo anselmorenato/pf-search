@@ -1,7 +1,7 @@
 import __init__
 from  searchengine import searcher
 
-s = searcher.searcher("engine.db")
+s = searcher.searcher("data/engine.db")
 
 query  = ["help","python","programming","ppp","pp","aaaa"]
 
