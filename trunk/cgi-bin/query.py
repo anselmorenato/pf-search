@@ -8,10 +8,13 @@ import cgi
 import cgitb
 from time import time
 startTime = time()
+searchText = ""
+resultCount = 0
 
 from searchengine import searcher
 
-cgitb.enable()
+if not debug :
+    cgitb.enable()
 
 form = cgi.FieldStorage()
 
@@ -49,35 +52,40 @@ def tail():
 
 def beginResult():
     return "<hr>"
-def noResult():
+def noResult(is_print_result = True):
     str = htmlHeader()
     str += beginResult()
-    return str + """<H1>Empty Search</H1>please Input words and search again.""" + tail()
+    if is_print_result:
+        return str + """<H2>Your Search -%s - did not match any documents.""" % searchText + tail()
+    else:
+        return str+tail()
 
-def contextHeader(text,rescount=100):
+def contextHeader(text):
     t = time() - startTime
     timeStr = '%.5f' % t
     timeStr.rstrip('0')
-    return 'Result <b>1-10</b>" of about <b>%d</b> for <b>%s</b>.(%s seconds)'    % (rescount, cgi.escape(text), timeStr)
+    if resultCount < 10: val = resultCount
+    else : val = 10
+    return 'Result <b>1-%d</b>" of about <b>%d</b> for <b>%s</b>.(%s seconds)'    % (val,resultCount, cgi.escape(text), timeStr)
 
 def main():
+    global searchText,resultCount
     if not debug and not form.has_key('q'):
         # TODO Maybe return an query html page is better?
-        print noResult()
+        print noResult(False)
         exit
     else:
         s = []
-#        if debug:
-#            pass
-            #text = argv[1]
-#        else:
-        text = form["q"].value
-            
+        if debug:
+            text = argv[1]
+        else:
+            text = form["q"].value
+        searchText = text
         if debug: print "text is :",text
         s = searcher.searcher("/var/local/se/engine.db")
         page = htmlHeader(text)
         
-        result = s.query(text)
+        result,resultCount = s.query(text)
         page += contextHeader(text)
         page += beginResult()
         

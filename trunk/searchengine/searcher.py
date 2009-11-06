@@ -66,19 +66,20 @@ class searcher:
         return self.con.execute(
             "select url from urllist where rowid=%d" % ids).fetchone()[0]
 
-    def query(self, q):
+    def query(self, q, start=0,count=10):
         res = []
         rows, wordids = self.getmatchrows(q)
         if (rows == []):
             #print 'No result about %s' % q
-            return res
+            return res,0
         scores = self.getscoredlist(rows, wordids)
         randedscores = sorted([(score, url) for (url, score) in scores.items()], reverse = 1)
         
-        for (score, urlid) in randedscores[0:10]:
+        for (score, urlid) in randedscores[start:start+count]:
             #print '%f\t%s' % (score, self. geturlname(urlid))
             res.append((score,self.geturlname(urlid)))
-        return res
+        # return the result and the how many result
+        return res,len(randedscores)
             
     def normalizescores(self, scores, smallIsBetter = 0):
         vsmall = 0.0001 # avoid zero devid
