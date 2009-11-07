@@ -35,6 +35,7 @@ class crawler:
 
     # Add word and url to wordlocation schame
     def addtoindex(self, url, soup):
+        
         if self.isindexed(url) : return
         print 'Indexing %s' % url
 
@@ -108,48 +109,59 @@ class crawler:
         req = urllib2.Request(url)
         return req
 
-    def crawl (self, pages, depth=2):
+ 
+    def crawl (self, pages, depth=2, lock=None):
         for i in range(depth):
             newpages = set()
             for page in pages:
-                print "Opening %s" % page
-
-                try:
-                    node = urllib2.urlopen(page, timeout=30)
-                except urllib2.HTTPError, msg:
-                    print "%s  %s" % (page, msg)
-                    continue
-                except urllib2.URLError, msg:
-                    print "%s %s" % (page, msg)
-                    continue
-                except:
-                    print "%s cann't open" % page
-                    raise
-                
+                node = self.__openUrl(page)
+                if node == None: continue
                 try:
                     tree = lxml.html.parse(node)
                 except IOError, msg:
                     print msg
-                    print "Please Check Your Network"
-                
-                    
+                    print "IOError: Please Check Your Network Connection."
 
+                if lock != None: lock.acquire()
+                print "lock db"
+                # start operating db
                 self.addtoindex(page,tree)
-                links = tree.findall('.//a')
-                for link in links:
-                    if ('href' in dict(link.attrib)):
-                        url = urljoin(page, link.attrib['href'])
-                        if url.find("'") != -1: continue
-                        url = url.split('#')[0]
-                        if url[0:4] == 'http' and not self.isindexed(url):
-                            newpages.add(url)
-                         #   print 'adding %s' % url
-                        linkText = link.text
-                        # This should be the title of link
-                        self.addlinkref(page,url,linkText)
+                self.__process_link(tree,page,newpages,linkText)
                 self.dbcommit()
+                # end operating db
+                print "release db"
+                if lock != None: lock.release()
             pages = newpages
 
+    def __openUrl(self, page,timeout=30):
+        print "Opening %s" % page
+
+        try:
+            node = urllib2.urlopen(page, timeout=timeout)
+        except urllib2.HTTPError, msg:
+            print "%s  %s" % (page, msg)
+            return None
+        except urllib2.URLError, msg:
+            print "%s %s" % (page, msg)
+            return None
+        except:
+            print "%s cann't open" % page
+            raise
+        return node
+    
+
+    def __process_link(self,tree,page,newpages,linkText):
+        for link in links:
+            if ('href' in dict(link.attrib)):
+                url = urljoin(page, link.attrib['href'])
+                if url.find("'") != -1: continue
+                url = url.split('#')[0]
+                if url[0:4] == 'http' and not self.isindexed(url):
+                    newpages.add(url)
+                         #   print 'adding %s' % url
+                    linkText = link.text
+                        # This should be the title of link
+                    self.addlinkref(page,url,linkText)
 
     def createindextables(self):
         self.con.execute('create table urllist(url)')
