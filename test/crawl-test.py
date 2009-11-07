@@ -1,5 +1,5 @@
 import __init__
-import searchengine
+from searchengine.crawler import crawler
 
 pagelist=[
     'http://en.wikipedia.org/',
@@ -17,7 +17,7 @@ pagelist3 = [
     'http://www.cnn.com',
     'http://www.bbc.com'
 ]
-crawler=searchengine.crawler('data/news.db')
+crawler=crawler('data/news.db')
 # crawler = searchengine.crawler('searchindex.db')
 try:
     crawler.createindextables()
