@@ -97,6 +97,3 @@ class searcher:
         counts = dict([(row[0], 0) for row in rows])
         for now in rows: counts[row[0]] += 1
         return self.normalizescores(counts)
-
-    
-                    
