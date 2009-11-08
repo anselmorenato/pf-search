@@ -1,13 +1,20 @@
 -*- Mode: org; -*-
 
+** Feather need.
+* TODO Add pagerank to engine.
 
-* DONE Need replace Beautiful Soup to another better XML/HTML parser lib
-
-* DONE Intergarate with browser
-
-* TODO make scrawler a multi thread. a thread pool do scrawl thing.
+* TODO Refactury crawler code. let every thread have a result queue.
 * TODO Need add fetch method to donn't fetch the already UPDATEed, needs to add A time in url db, and first get a HEAD to know time, Modified-since
   
 * TODO multi word search need add.
   
+
+
+** Feather done.
+* DONE Need replace Beautiful Soup to another better XML/HTML parser lib
+
+* DONE Intergarate with browser
+
+* DONE make scrawler a multi thread. a thread pool do scrawl thing.
+
   

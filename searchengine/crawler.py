@@ -5,8 +5,12 @@ from lxml.html import tostring
 from lxml.html.clean import Cleaner
 from urlparse import urljoin
 
+import Queue
+from threading import Thread, Lock
+from dbmanager import dbmanager
 
-from pysqlite2 import dbapi2 as sqlite
+debug = False
+
 
 
 ignorewords = set(['the','of','to','and','a','in','is','it'])
@@ -14,28 +18,30 @@ ignorewords = set(['the','of','to','and','a','in','is','it'])
 
 class crawler:
     def __init__(self, dbname):
-        self.con = sqlite.connect(dbname)
+        self.dber = dbmanager(dbname)
+        self.dber.start()
+        self.dbLock = Lock()
+        self.newpageLock = Lock()
+        self.wordidLock = Lock()
 
     def __del__(self):
-        self.con.close()
+        self.dber.close()
 
     def dbcommit(self):
-        self.con.commit()
+        self.dber.dbcommit()
 
     def getentryid(self,table,field,value,createnew=True):
-        cur = self.con.execute(
-            "select rowid from %s where %s = '%s'" % (table, field, value))
-        res = cur.fetchone()
+        res = self.dber.fetchone("select rowid from %s where %s = '%s'" \
+                                      % (table, field, value))
         if res == None:
-            cur=self.con.execute(
+            lastrowid = self.dber.do_wordid(
                 "insert into %s (%s) values ('%s')" % (table, field, value))
-            return cur.lastrowid
+            return lastrowid
         else:
             return res[0]
 
     # Add word and url to wordlocation schame
     def addtoindex(self, url, soup):
-        
         if self.isindexed(url) : return
         print 'Indexing %s' % url
 
@@ -45,17 +51,22 @@ class crawler:
 
         # get url's id
         urlid = self.getentryid('urllist', 'url', url)
-
+        if debug: print 'urlid :',urlid
         # make every word related
         for i in range(len(words)):
             word = words[i]
             if word in ignorewords: continue
             wordid = self.getentryid('wordlist', 'word', word);
-            self.con.execute("insert into wordlocation(urlid,wordid,location) values (%d, %d, %d)"
-                             % (urlid,wordid, i))
+            try:
+                self.dber.do_oneshot("insert into wordlocation(urlid,wordid,location) values (%d, %d, %d)" % (urlid,wordid, i))
+            except TypeError:
+                print "urlid:",urlid,"wordid:",wordid,"i:",i
+                raise
+                
         
     
     def gettextonly(self, tree):
+        if debug: print 'gettextonly'
         cleaner = Cleaner(style=True, links=True, add_nofollow=True,
                           page_structure=False, safe_attrs_only=False)
 
@@ -89,11 +100,12 @@ class crawler:
         return [s.lower() for s in splitter.split(text) if s != '']
 
     def isindexed(self, url):
-        u = self.con.execute \
-            ("select rowid from urllist where url='%s'" % url).fetchone()
+        if debug: print 'isindexed'
+        u = self.dber.fetchone\
+            ("select rowid from urllist where url='%s'" % url)
         if u != None:
-            v = self.con.execute(
-                'select * from wordlocation where urlid=%d' % u[0]).fetchone()
+            v = self.dber.fetchone(
+                'select * from wordlocation where urlid=%d' % u[0])
             if v!= None: return True
         else :
             return False
@@ -109,31 +121,57 @@ class crawler:
         req = urllib2.Request(url)
         return req
 
- 
-    def crawl (self, pages, depth=2, lock=None):
+    def thread_crawl(self, jobs, newpages):
+        while(True):
+            try:
+                page = jobs.get(True,10)
+            except:
+                print 'one thread gone'
+                return
+            self.__doCrawl(page,newpages)
+
+    def crawl (self, pages, depth=2, numthreads=10):
+        threads = []
+        
         for i in range(depth):
+            print '.'
             newpages = set()
+            jobs = Queue.Queue()
             for page in pages:
-                node = self.__openUrl(page)
-                if node == None: continue
-                try:
-                    tree = lxml.html.parse(node)
-                except IOError, msg:
-                    print msg
-                    print "IOError: Please Check Your Network Connection."
+                jobs.put(page)
+            for i in range(numthreads):
+                t = Thread(target=self.thread_crawl,args=(jobs,newpages))
+                threads.append(t)
+                t.start()
 
-                if lock != None: lock.acquire()
-                print "lock db"
-                # start operating db
-                self.addtoindex(page,tree)
-                self.__process_link(tree,page,newpages,linkText)
-                self.dbcommit()
-                # end operating db
-                print "release db"
-                if lock != None: lock.release()
+            for t in threads:
+                t.join()
+            if debug: print 'finish depth: ',depth
             pages = newpages
+        self.dber.close()
 
-    def __openUrl(self, page,timeout=30):
+    def __doCrawl(self, page,newpages):
+        if debug: print 'doCrawl'
+        node = self.__openUrl(page)
+        if node == None: return
+        try:
+            tree = lxml.html.parse(node)
+        except IOError, msg:
+            print msg
+            print "IOError: Please Check Your Network Connection."
+            
+        #self.dbLock.acquire()
+        #print "lock db"
+                # start operating db
+        self.addtoindex(page,tree)
+        self.__process_link(tree, page,newpages)
+        self.dbcommit()
+                # end operating db
+        #print "release db"
+        #self.dbLock.release()
+
+        
+    def __openUrl(self, page, timeout=30):
         print "Opening %s" % page
 
         try:
@@ -150,29 +188,34 @@ class crawler:
         return node
     
 
-    def __process_link(self,tree,page,newpages,linkText):
+    def __process_link(self,tree,page,newpages):
+        if debug :print 'processing link '
+        links = tree.findall('.//a')
         for link in links:
             if ('href' in dict(link.attrib)):
                 url = urljoin(page, link.attrib['href'])
                 if url.find("'") != -1: continue
                 url = url.split('#')[0]
                 if url[0:4] == 'http' and not self.isindexed(url):
+                    if (debug): print 'get newpageLock'
+                    self.newpageLock.acquire()
                     newpages.add(url)
-                         #   print 'adding %s' % url
+                    self.newpageLock.release()
+                    if (debug): print 'release new page lock'
+                    if (debug):   print 'adding %s' % url
                     linkText = link.text
                         # This should be the title of link
                     self.addlinkref(page,url,linkText)
 
     def createindextables(self):
-        self.con.execute('create table urllist(url)')
-        self.con.execute('create table wordlist(word)')
-        self.con.execute('create table wordlocation(urlid,wordid,location)')
-        self.con.execute('create table link(fromid integer, toid integer)')
-        self.con.execute('create table linkwords(wordid,linkid)')
-        self.con.execute('create index wordidx on wordlist(word)')
-        self.con.execute('create index urlidx on urllist(url)')
-        self.con.execute('create index wordurlidx on wordlocation(wordid)')
-        self.con.execute('create index urltoidx on link(toid)')
-        self.con.execute('create index urlfromidx on link(fromid)')
-        self.dbcommit()
-        
+        self.dber.do_oneshot('create table urllist(url)')
+        self.dber.do_oneshot('create table wordlist(word)')
+        self.dber.do_oneshot('create table wordlocation(urlid,wordid,location)')
+        self.dber.do_oneshot('create table link(fromid integer, toid integer)')
+        self.dber.do_oneshot('create table linkwords(wordid,linkid)')
+        self.dber.do_oneshot('create index wordidx on wordlist(word)')
+        self.dber.do_oneshot('create index urlidx on urllist(url)')
+        self.dber.do_oneshot('create index wordurlidx on wordlocation(wordid)')
+        self.dber.do_oneshot('create index urltoidx on link(toid)')
+        self.dber.do_oneshot('create index urlfromidx on link(fromid)')
+        self.dber.dbcommit()
