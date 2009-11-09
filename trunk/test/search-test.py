@@ -1,9 +1,16 @@
 import __init__
 from  searchengine import searcher
+import sys
 
-s = searcher.searcher("data/engine.db")
+if len(sys.argv)  > 1:
+    db = sys.argv[1]
+else:
+    db = "data/engine.db"
+    
+print "search engine use database: ", db
+s = searcher.searcher(db)
 
-query  = ["help","python","programming","ppp","pp","aaaa"]
+query  = ["help","python","programming","ppp","pp","aaaa", "kaifu"]
 
 for q in query:
     print "=" * 20
