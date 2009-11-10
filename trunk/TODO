@@ -2,21 +2,20 @@
 
 ** Feather need.
    
-* TODO [#A] Crectness check of data base. or use other data base support multi pthread!
-* TODO [#B] Add pagerank to engine.
-
-* TODO [#B] Refactury crawler code. let every thread have a result queue.
-* TODO [#B] Need add fetch method to donn't fetch the already UPDATEed, needs to add A time in url db, and first get a HEAD to know time, Modified-since
-  
-* TODO [#B] multi word search need add.
-  
+*** TODO [#B] Add pagerank to engine.
+*** TODO [#B] Need add fetch method to donn't fetch the already UPDATEed, needs to add A time in url db, and first get a HEAD to know time, Modified-since
+*** TODO [#B] multi word search need add.
+    
 
 
 ** Feather done.
-* DONE Need replace Beautiful Soup to another better XML/HTML parser lib
+*** DONE [#B] Refactury crawler code. let every thread have a result queue.
+*** DONE use mysql as data base.
+*** DONE [#A] Crectness check of data base. or use other data base support multi pthread!
+*** DONE Need replace Beautiful Soup to another better XML/HTML parser lib
 
-* DONE Intergarate with browser
+*** DONE Intergarate with browser
 
-* DONE make scrawler a multi thread. a thread pool do scrawl thing.
+*** DONE make scrawler a multi thread. a thread pool do scrawl thing.
 
-  
+    

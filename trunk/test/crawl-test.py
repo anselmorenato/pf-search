@@ -1,5 +1,5 @@
 import __init__
-from searchengine.crawler import crawler
+from searchengine.crawler import crawler,mtcrawler
 
 pagelist=[
     'http://en.wikipedia.org/',
@@ -25,10 +25,13 @@ pagelist3 = [
     'http://www.nationalreview.com/',
     'http://www.forbes.com/',
 ]
-crawler=crawler('data/news.db')
+#crawler=crawler('data/news.db')
 # crawler = searchengine.crawler('searchindex.db')
-try:
-    crawler.createindextables()
-except:
-    pass
-crawler.crawl(pagelist3,depth=5)
+#try:
+#    crawler.createindextables()
+#except:
+#    raise
+#    pass
+
+mtcrawler(pages=pagelist3, dbuser='root', dbpasswd='emerald').start()
+
