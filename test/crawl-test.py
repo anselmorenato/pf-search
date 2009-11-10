@@ -33,5 +33,12 @@ pagelist3 = [
 #    raise
 #    pass
 
-mtcrawler(pages=pagelist3, dbuser='root', dbpasswd='emerald').start()
+m = mtcrawler(pages=pagelist3, dbuser='root', dbpasswd='emerald')
+try:
+    m.createdb()
+except:
+    pass
+m.start()
+
+
 
