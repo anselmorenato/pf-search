@@ -37,6 +37,7 @@ class mtcrawler:
         self.pages = pages
 
     def start(self):
+        
         for i in range(self.depth):
             self.crawlervec.clear()
             for page in self.pages:
@@ -55,7 +56,13 @@ class mtcrawler:
             self.pages = self.newpages
 
     def createdb(self):
-        pass
+        try:
+            crawler(dbname = self.dbname,jobs = self.jobs, \
+                        newpages = self.newpages, host= self.dbhost, \
+                        dbuser=self.dbuser, dbpasswd = self.dbpasswd).createindextables();
+        except:
+            raise
+        return self
     def cleardb(self):
         # this sql command
         # drop database pfdb;
